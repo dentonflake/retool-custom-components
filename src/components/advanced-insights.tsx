@@ -1,10 +1,11 @@
 import { Retool } from '@tryretool/custom-component-support'
 import styles from '../styles/advanced-insights.module.css'
-import { useState, useMemo, useCallback, FC, useRef, useEffect } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import { ColDef, GridState, ModuleRegistry, StateUpdatedEvent, AllCommunityModule } from 'ag-grid-community'
+import { ColDef, GridState, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQuartz } from 'ag-grid-community'
 import { LicenseManager, AllEnterpriseModule } from 'ag-grid-enterprise'
 import Tools from './tools'
+import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
 LicenseManager.setLicenseKey("Using_this_{AG_Charts_and_AG_Grid}_Enterprise_key_{AG-103378}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{Nellis_Auction}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{nellis}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{nellis}_need_to_be_licensed___{nellis}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Charts_and_AG_Grid}_Enterprise_versions_released_before_{11_September_2026}____[v3]_[0102]_MTc4OTA4MTIwMDAwMA==67f362d278f6fbbb12fe215d38e32531")
@@ -25,12 +26,12 @@ type Row = {
   supervisorSecond?: string
   supervisorThird?: string
   supervisorFourth?: string
-  type?: string
+  type: string
   job?: string
   department?: string
   area?: string
   jobType?: string
-  hours?: number
+  hours: number
   points?: number
   actions?: number
   jobActions?: number
@@ -44,6 +45,7 @@ type State = {
   description: string
   visibility: string
   gridState: string
+  updatedAt: string
 }
 
 export const AdvancedInsights = () => {
@@ -57,6 +59,9 @@ export const AdvancedInsights = () => {
   // Retool inspector input (Grid States)
   const [rawGridStates, setRawGridStates] = Retool.useStateArray({ name: "gridStates", label: "Grid States" })
   const gridStates = useMemo(() => rawGridStates as State[], [rawGridStates])
+
+  // Retool inspector input (Cargo Id)
+  const [cargoId, setCargoId] = Retool.useStateNumber({ name: "cargoId", label: "Cargo Id" })
 
   // Retool state output (currentGridState)
   const [currentGridState, setCurrentGridState] = Retool.useStateObject({ name: "currentGridState", inspector: "hidden", initialValue: {} })
@@ -571,6 +576,152 @@ export const AdvancedInsights = () => {
       filter: "agNumberColumnFilter",
       enableValue: true
     },
+
+    {
+      colId: 'pph',
+      headerName: 'PPH',
+      filter: 'agNumberColumnFilter',
+      aggFunc: 'pphAggregation',
+      allowedAggFuncs: ['pphAggregation'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data?.jobType
+
+          const points = Number(params.data?.points) ?? 0
+          const directHours = type === 'Direct' ? Number(params.data?.hours) ?? 0 : 0
+
+          return {
+            points,
+            directHours,
+            value: directHours > 0 ? points / directHours : 0
+          }
+        }
+      },
+
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const points = Number(params.data?.points) ?? 0
+          const directHours = type === 'direct' ? Number(params.data?.hours) ?? 0 : 0
+
+          return directHours > 0 ? points / directHours : 0
+        }
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(0);
+        }
+
+        return '0';
+      }
+    },
+
+    {
+      colId: 'gapPercent',
+      headerName: 'Gap %',
+      aggFunc: 'gapPercentAggregation',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['gapPercentAggregation'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.type
+
+          const gapHours = type === 'gap' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return {
+            gapHours,
+            totalHours,
+            value: totalHours > 0 ? (gapHours / totalHours) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.type
+
+          const gapHours = type === 'gap' ? params.data!.hours : 0
+          const totalHours = params.data!.hours
+
+          return totalHours > 0 ? (gapHours / totalHours) * 100 : 0
+        }
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00';
+      }
+    },
+
+    {
+      colId: 'directPercent',
+      headerName: 'Direct %',
+      headerTooltip: 'Direct Hours / Total Hours',
+      aggFunc: 'directPercentAggregation',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['directPercentAggregation'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const directHours = type === 'Direct' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return {
+            directHours,
+            totalHours,
+            value: totalHours > 0 ? (directHours / totalHours) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const directHours = type === 'Direct' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return totalHours > 0 ? (directHours / totalHours) * 100 : 0
+        }
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00';
+      }
+    }
   ])
 
   // Adds additional defaults to each column definition
@@ -579,14 +730,30 @@ export const AdvancedInsights = () => {
     minWidth: 200,
     filterParams: {
       buttons: ["reset"]
+    },
+    cellRendererParams: {
+      suppressCount: true
     }
   }), [])
 
   useEffect(() => {
-    if (!gridRef.current?.api) return;           // wait until ready
+    if (!gridRef.current?.api) return;
     if (!view?.gridState) return;
     gridRef.current.api.setState(JSON.parse(view.gridState));
   }, [view]);
+
+  // useEffect(() => {
+  //   setView(gridStates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0])
+
+  // }, [gridStates])
+
+  const theme = themeQuartz.withParams({
+    borderRadius: 4,
+    browserColorScheme: "light",
+    headerFontSize: 14,
+    spacing: 8,
+    wrapperBorderRadius: 0
+  });
 
   return (
     <section className={styles.container}>
@@ -600,17 +767,27 @@ export const AdvancedInsights = () => {
 
         view={view}
         setView={setView}
+
+        cargoId={cargoId}
       />
 
       <div className={styles.grid}>
         <AgGridReact
           ref={gridRef}
+          theme={theme}
           rowData={rowData}
           columnDefs={colDefs}
           defaultColDef={defaultColDef}
           sideBar
-          initialState={state}
+          // initialState={state}
           onStateUpdated={onStateUpdated}
+          suppressAggFuncInHeader={true}
+          aggFuncs={{
+            distinctCount,
+            pphAggregation,
+            gapPercentAggregation,
+            directPercentAggregation
+          }}
         />
       </div>
 

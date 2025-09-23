@@ -11,11 +11,15 @@
   grid-column: 1 / 4;
 }
 
-.import {
+.share {
   grid-column: 4 / 5;
 }
 
-.share {
+.import {
+  grid-column: 5 / 6;
+}
+
+.saveAs {
   grid-column: 8 / 9;
 }
 

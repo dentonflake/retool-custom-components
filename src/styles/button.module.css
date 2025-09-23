@@ -5,7 +5,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.button:hover {
+.button:not(.disabled):hover {
   cursor: pointer;
 }
 
@@ -14,7 +14,7 @@
   color: var(--color-neutral-050);
 }
 
-.primary:hover {
+.primary:not(.disabled):hover {
   background-color: var(--color-neutral-600);
 }
 
@@ -23,6 +23,10 @@
   color: var(--color-neutral-800);
 }
 
-.secondary:hover {
+.secondary:not(.disabled):hover {
   background-color: var(--color-neutral-050);
+}
+
+.disabled {
+  opacity: 0.5;
 }
