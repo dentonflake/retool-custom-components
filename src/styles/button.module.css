@@ -1,0 +1,28 @@
+
+.button {
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.button:hover {
+  cursor: pointer;
+}
+
+.primary {
+  background-color: var(--color-neutral-800);
+  color: var(--color-neutral-050);
+}
+
+.primary:hover {
+  background-color: var(--color-neutral-600);
+}
+
+.secondary {
+  background-color: #fff;
+  color: var(--color-neutral-800);
+}
+
+.secondary:hover {
+  background-color: var(--color-neutral-050);
+}

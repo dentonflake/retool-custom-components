@@ -1,9 +1,10 @@
 import { Retool } from '@tryretool/custom-component-support'
-import styles from './styles/grid.module.css'
-import { useState, useMemo, useCallback, FC, useRef } from 'react'
+import styles from '../styles/advanced-insights.module.css'
+import { useState, useMemo, useCallback, FC, useRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import { ColDef, GridState, themeQuartz, ModuleRegistry, StateUpdatedEvent, AllCommunityModule } from 'ag-grid-community'
+import { ColDef, GridState, ModuleRegistry, StateUpdatedEvent, AllCommunityModule } from 'ag-grid-community'
 import { LicenseManager, AllEnterpriseModule } from 'ag-grid-enterprise'
+import Tools from './tools'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule])
 LicenseManager.setLicenseKey("Using_this_{AG_Charts_and_AG_Grid}_Enterprise_key_{AG-103378}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{Nellis_Auction}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{nellis}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{nellis}_need_to_be_licensed___{nellis}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Charts_and_AG_Grid}_Enterprise_versions_released_before_{11_September_2026}____[v3]_[0102]_MTc4OTA4MTIwMDAwMA==67f362d278f6fbbb12fe215d38e32531")
@@ -36,9 +37,37 @@ type Row = {
   nonJobActions?: number
 }
 
-export const AdvancedInsights: FC = () => {
+type State = {
+  id: string
+  createdBy: number
+  name: string
+  description: string
+  visibility: string
+  gridState: string
+}
 
-  // Holds the state of the table. Holds initial state when rendered.
+export const AdvancedInsights = () => {
+
+  const gridRef = useRef<AgGridReact<Row>>(null);
+
+  // Retool inspector input (Data Source)
+  const [rawRowData, setRawRowData] = Retool.useStateArray({ name: "data", label: "Data Source" })
+  const rowData = useMemo(() => rawRowData as Row[], [rawRowData])
+
+  // Retool inspector input (Grid States)
+  const [rawGridStates, setRawGridStates] = Retool.useStateArray({ name: "gridStates", label: "Grid States" })
+  const gridStates = useMemo(() => rawGridStates as State[], [rawGridStates])
+
+  // Retool state output (currentGridState)
+  const [currentGridState, setCurrentGridState] = Retool.useStateObject({ name: "currentGridState", inspector: "hidden", initialValue: {} })
+
+  // Retool state output (selectedView)
+  const [selectedView, setSelectedView] = Retool.useStateObject({ name: "selectedView", inspector: "hidden", initialValue: {} })
+
+  // Internal component state (Selected View)
+  const [view, setView] = useState<State | undefined>()
+
+  // Internal component state (Grid State)
   const [state, setState] = useState<GridState>(JSON.parse(`{
     "rowGroup": {
       "groupColIds": [
@@ -293,14 +322,10 @@ export const AdvancedInsights: FC = () => {
     }
   }`))
 
-  // Holds row data from Retool app
-  const [rawData, setRawData] = Retool.useStateArray({
-    name: "data",
-    label: "Data Source"
-  })
-
-  // Converts raw Retool.SerializableArray data to typed Row[] data by casting
-  const rowData = useMemo(() => rawData as Row[], [rawData])
+  // Event handler that updates the internal state of the grid when changed
+  const onStateUpdated = useCallback((params: StateUpdatedEvent<Row>) => {
+    setState(params.state)
+  }, [])
 
   // Holds the state of the column definitions.
   const [colDefs, setColDefs] = useState<ColDef<Row>[]>([
@@ -557,21 +582,38 @@ export const AdvancedInsights: FC = () => {
     }
   }), [])
 
-  // Event handler function that updates the state of the table on each change
-  const onStateUpdated = useCallback((params: StateUpdatedEvent<Row>) => {
-    setState(params.state)
-  }, [])
+  useEffect(() => {
+    if (!gridRef.current?.api) return;           // wait until ready
+    if (!view?.gridState) return;
+    gridRef.current.api.setState(JSON.parse(view.gridState));
+  }, [view]);
 
   return (
-    <div className={styles.grid}>
-      <AgGridReact
-        rowData={rowData}
-        columnDefs={colDefs}
-        defaultColDef={defaultColDef}
-        sideBar
-        initialState={state}
-        onStateUpdated={onStateUpdated}
+    <section className={styles.container}>
+
+      <Tools
+        setCurrentGridState={setCurrentGridState}
+        setSelectedView={setSelectedView}
+
+        gridStates={gridStates}
+        state={state}
+
+        view={view}
+        setView={setView}
       />
-    </div>
+
+      <div className={styles.grid}>
+        <AgGridReact
+          ref={gridRef}
+          rowData={rowData}
+          columnDefs={colDefs}
+          defaultColDef={defaultColDef}
+          sideBar
+          initialState={state}
+          onStateUpdated={onStateUpdated}
+        />
+      </div>
+
+    </section>
   )
 }

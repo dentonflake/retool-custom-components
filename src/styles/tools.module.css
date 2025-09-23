@@ -1,0 +1,24 @@
+
+.tools {
+  padding: 1rem;
+
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 1rem;
+}
+
+.states {
+  grid-column: 1 / 4;
+}
+
+.import {
+  grid-column: 4 / 5;
+}
+
+.share {
+  grid-column: 8 / 9;
+}
+
+.save {
+  grid-column: 9 / 10;
+}

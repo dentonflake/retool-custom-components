@@ -6,6 +6,7 @@
     "@tryretool/custom-component-support": "latest",
     "ag-grid-enterprise": "^34.2.0",
     "ag-grid-react": "^34.2.0",
+    "clsx": "^2.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
