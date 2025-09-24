@@ -3,16 +3,7 @@ import Button from './button'
 import Dropdown from './dropdown'
 import { Retool } from '@tryretool/custom-component-support'
 import { GridState } from 'ag-grid-community'
-
-type State = {
-  id: string
-  createdBy: number
-  name: string
-  description: string
-  visibility: string
-  gridState: string
-  updatedAt: string
-}
+import { State } from '../utils/definitions'
 
 type Props = {
   setCurrentGridState: (updates: Retool.SerializableObject) => void

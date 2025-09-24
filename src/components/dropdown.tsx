@@ -1,14 +1,5 @@
 import styles from '../styles/dropdown.module.css'
-
-type State = {
-  id: string
-  createdBy: number
-  name: string
-  description: string
-  visibility: string
-  gridState: string
-  updatedAt: string
-}
+import { State } from '../utils/definitions'
 
 type Props = {
   // options: Option[]
