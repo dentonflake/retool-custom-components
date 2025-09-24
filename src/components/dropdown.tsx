@@ -32,7 +32,7 @@ const Dropdown = ({ gridStates, className, view, setView }: Props) => {
     >
       {gridStates.map((option) => (
         <option key={option.id} value={option.id}>
-          {option.visibility.charAt(0).toUpperCase() + option.visibility.slice(1)} - {option.name}
+          {option.name}
         </option>
       ))}
     </select>

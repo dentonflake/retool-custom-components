@@ -737,15 +737,11 @@ export const AdvancedInsights = () => {
   }), [])
 
   useEffect(() => {
-    if (!gridRef.current?.api) return;
-    if (!view?.gridState) return;
+    if (!gridRef.current?.api || !view?.gridState) return;
     gridRef.current.api.setState(JSON.parse(view.gridState));
   }, [view]);
 
-  // useEffect(() => {
-  //   setView(gridStates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0])
-
-  // }, [gridStates])
+  useEffect(() => { setView(gridStates.find(gridState => gridState.id === selectedView.id)) }, [gridStates])
 
   const theme = themeQuartz.withParams({
     borderRadius: 4,
@@ -779,7 +775,7 @@ export const AdvancedInsights = () => {
           columnDefs={colDefs}
           defaultColDef={defaultColDef}
           sideBar
-          // initialState={state}
+          initialState={state}
           onStateUpdated={onStateUpdated}
           suppressAggFuncInHeader={true}
           aggFuncs={{
