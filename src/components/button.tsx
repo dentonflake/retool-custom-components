@@ -1,5 +1,4 @@
 import styles from '../styles/button.module.css'
-import { Retool } from '@tryretool/custom-component-support'
 import clsx from 'clsx'
 
 type Props = {

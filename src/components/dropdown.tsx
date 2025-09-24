@@ -1,31 +1,42 @@
+import { GridState } from 'ag-grid-enterprise'
 import styles from '../styles/dropdown.module.css'
-import { State } from '../utils/definitions'
+import { DropdownProps } from '../utils/definitions'
+import { Retool } from '@tryretool/custom-component-support'
 
-type Props = {
-  // options: Option[]
-  gridStates: State[]
-  className?: string
-  view: State | undefined
-  setView: (value: React.SetStateAction<State | undefined>) => void
-}
-
-const Dropdown = ({ gridStates, className, view, setView }: Props) => {
+const Dropdown = ({ gridRef, gridStates, className, selectedGridState, setSelectedGridState }: DropdownProps) => {
 
   const onChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setView(gridStates.find(gridState => gridState.id === event.target.value))
+
+    const selectedState = gridStates.find(gridState => gridState.id === event.target.value)
+
+    if (!selectedState) return
+
+    setSelectedGridState(selectedState as Retool.SerializableObject)
+
+    if (!gridRef.current) return
+
+    const parseGridState = JSON.parse(selectedState.gridState) as GridState
+
+    gridRef.current.api.setState(parseGridState)
   }
 
   return (
     <select
-      value={view?.id}
-      onChange={onChange}
       className={`${styles.dropdown} ${className}`}
+      value={selectedGridState.id || ''}
+      onChange={onChange}
     >
-      {gridStates.map((option) => (
-        <option key={option.id} value={option.id}>
-          {option.name}
+
+      <option value='' disabled>
+        Select a view
+      </option>
+
+      {gridStates.map((gridState) => (
+        <option key={gridState.id} value={gridState.id}>
+          {gridState.name}
         </option>
       ))}
+
     </select>
   )
 }

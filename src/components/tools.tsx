@@ -2,84 +2,60 @@ import styles from '../styles/tools.module.css'
 import Button from './button'
 import Dropdown from './dropdown'
 import { Retool } from '@tryretool/custom-component-support'
-import { GridState } from 'ag-grid-community'
-import { State } from '../utils/definitions'
+import { State, ToolsProps } from '../utils/definitions'
+import { useMemo } from 'react'
 
-type Props = {
-  setCurrentGridState: (updates: Retool.SerializableObject) => void
-  setSelectedView: (updates: Retool.SerializableObject) => void
-  gridStates: State[]
-  state: GridState
-  view: State | undefined
-  setView: (value: React.SetStateAction<State | undefined>) => void
-  cargoId: number
-}
+const Tools = ({ gridRef, gridStates, cargoId }: ToolsProps) => {
 
-const Tools = ({ setCurrentGridState, setSelectedView, gridStates, state, view, setView, cargoId }: Props) => {
+  const [rawSelectedGridState, setSelectedGridState] = Retool.useStateObject({ name: "selectedView", inspector: "hidden" })
+
+  const selectedGridState = useMemo(() => rawSelectedGridState as State, [rawSelectedGridState])
 
   // Retool event handlers
-  const handleImport = Retool.useEventCallback({ name: "Import" })
   const handleShare = Retool.useEventCallback({ name: "Share" })
-  const handleSave = Retool.useEventCallback({ name: "Save" })
+  const handleImport = Retool.useEventCallback({ name: "Import" })
   const handleSaveAs = Retool.useEventCallback({ name: "Save As" })
-
-  const handleClickShare = () => {
-    setSelectedView(view as Retool.SerializableObject)
-    handleShare()
-  }
-
-  const handleClickImport = () => {
-    handleImport()
-  }
-
-  const handleClickSaveAs = () => {
-    setCurrentGridState(state as Retool.SerializableObject)
-    handleSaveAs()
-  }
-
-  const handleClickSave = () => {
-    setCurrentGridState(state as Retool.SerializableObject)
-    setSelectedView(view as Retool.SerializableObject)
-    handleSave()
-  }
-
+  const handleSave = Retool.useEventCallback({ name: "Save" })
+  
   return (
     <div className={styles.tools}>
 
         <Dropdown
-          gridStates={gridStates}
+          gridRef={gridRef}
           className={styles.states}
-          view={view}
-          setView={setView}
+          gridStates={gridStates}
+          selectedGridState={selectedGridState}
+          setSelectedGridState={setSelectedGridState}
         />
 
         <Button
           type="secondary"
           text="SHARE"
-          onClick={handleClickShare}
+          onClick={handleShare}
           className={styles.share}
+          disabled={!selectedGridState.name}
         />
 
         <Button
           type="primary"
           text="IMPORT"
-          onClick={handleClickImport}
+          onClick={handleImport}
           className={styles.import}
         />
 
         <Button
           type="secondary"
           text="SAVE AS"
-          onClick={handleClickSaveAs}
+          onClick={handleSaveAs}
           className={styles.saveAs}
         />
 
         <Button
           type="primary"
           text="SAVE"
-          onClick={handleClickSave}
+          onClick={handleSave}
           className={styles.save}
-          disabled={cargoId !== view?.createdBy}
+          disabled={cargoId !== selectedGridState?.createdBy}
         />
 
       </div>

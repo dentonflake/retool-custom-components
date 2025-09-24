@@ -3,11 +3,14 @@
   flex-direction: column;
   height: 100vh;
 
-  background-color: "#F5F7FA";
+  gap: 1rem;
+  padding: 1rem;
 }
 
 .grid {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   width: 100%;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-md);
 }

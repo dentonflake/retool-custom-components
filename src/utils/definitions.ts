@@ -1,3 +1,5 @@
+import { Retool } from '@tryretool/custom-component-support'
+import { AgGridReact } from 'ag-grid-react'
 
 export type Row = {
   year: number
@@ -39,4 +41,25 @@ export type State = {
   visibility: string
   gridState: string
   updatedAt: string
+}
+
+export type AdvancedInsightsGridProps = {
+  rowData: Row[]
+  gridStates: State[]
+  cargoId: number
+  setState?: (updates: Retool.SerializableObject) => void
+}
+
+export type ToolsProps = {
+  gridRef: React.RefObject<AgGridReact<Row>>
+  gridStates: State[]
+  cargoId: number
+}
+
+export type DropdownProps = {
+  gridRef: React.RefObject<AgGridReact<Row>>
+  className?: string
+  gridStates: State[]
+  selectedGridState: State
+  setSelectedGridState: (updates: Retool.SerializableObject) => void
 }
