@@ -1,8 +1,7 @@
 
 import { Retool } from '@tryretool/custom-component-support'
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
-import Tools from './tools'
 import styles from '../styles/advanced-insights.module.css'
 import { Row, AdvancedInsightsGridProps } from '../utils/definitions'
 import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
@@ -15,7 +14,7 @@ import { ColDef, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQua
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule, IntegratedChartsModule.with(AgChartsEnterpriseModule)])
 LicenseManager.setLicenseKey("Using_this_{AG_Charts_and_AG_Grid}_Enterprise_key_{AG-103378}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{Nellis_Auction}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{nellis}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{nellis}_need_to_be_licensed___{nellis}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Charts_and_AG_Grid}_Enterprise_versions_released_before_{11_September_2026}____[v3]_[0102]_MTc4OTA4MTIwMDAwMA==67f362d278f6fbbb12fe215d38e32531")
 
-const AdvancedInsightsGrid = ({ rowData, gridStates, cargoId }: AdvancedInsightsGridProps) => {
+const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps) => {
 
   // Retool state outputs
   const [currentGridState, setCurrentGridState] = Retool.useStateObject({ name: "currentGridState", inspector: "hidden", initialValue: {} })
@@ -326,7 +325,7 @@ const AdvancedInsightsGrid = ({ rowData, gridStates, cargoId }: AdvancedInsights
           const type = params.data!.jobType
 
           const points = Number(params.data?.points) ?? 0
-          const directHours = type === 'direct' ? Number(params.data?.hours) ?? 0 : 0
+          const directHours = type === 'Direct' ? Number(params.data?.hours) ?? 0 : 0
 
           return directHours > 0 ? points / directHours : 0
         }
@@ -508,14 +507,24 @@ const AdvancedInsightsGrid = ({ rowData, gridStates, cargoId }: AdvancedInsights
     
   }, []);
 
+  const onFirstDataRendered = () => {
+
+    if (!gridRef.current?.api || !gridState) return;
+
+    gridRef.current.api.setState(gridState);
+
+  }
+
+  useEffect(() => {
+
+    if (!gridRef.current?.api || !gridState) return;
+
+    gridRef.current.api.setState(gridState);
+
+  }, [gridState]);
+
   return (
     <section className={styles.container}>
-
-      <Tools
-        gridRef={gridRef}
-        gridStates={gridStates}
-        cargoId={cargoId}
-      />
 
       <div className={styles.grid}>
         <AgGridReact
@@ -535,6 +544,7 @@ const AdvancedInsightsGrid = ({ rowData, gridStates, cargoId }: AdvancedInsights
           cellSelection
 
           onStateUpdated={onStateUpdated}
+          onFirstDataRendered={onFirstDataRendered}
         />
       </div>
 

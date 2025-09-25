@@ -1,23 +1,21 @@
 import { Retool } from '@tryretool/custom-component-support';
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import AdvancedInsightsGrid from './advanced-insights-grid';
-import { Row, State } from '../utils/definitions';
+import { Row } from '../utils/definitions';
+import { GridState } from 'ag-grid-enterprise';
 
 export const AdvancedInsights = () => {
 
-  const [rawRowData] = Retool.useStateArray({ name: "data" });
-  const [rawGridStates] = Retool.useStateArray({ name: "gridStates" });
-  const [rawCargoId] = Retool.useStateNumber({ name: "cargoId" });
+  const [rawRowData] = Retool.useStateArray({ name: "data", label: "Data Source" });
+  const [rawGridState] = Retool.useStateObject({ name: "gridState", label: "Grid State" });
 
   const rowData = useMemo(() => rawRowData as Row[], [JSON.stringify(rawRowData)]);
-  const gridStates = useMemo(() => rawGridStates as State[], [JSON.stringify(rawGridStates)]);
-  const cargoId = useMemo(() => rawCargoId as number, [JSON.stringify(rawCargoId)]);
+  const gridState = useMemo(() => rawGridState as GridState, [JSON.stringify(rawGridState)]);
 
   return (
     <AdvancedInsightsGrid
       rowData={rowData}
-      gridStates={gridStates}
-      cargoId={cargoId}
+      gridState={gridState}
     />
   )
 };
