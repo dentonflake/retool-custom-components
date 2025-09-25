@@ -156,6 +156,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       filter: "agSetColumnFilter",
       enablePivot: true,
       enableRowGroup: true,
+      enableValue: true
     },
 
     {
@@ -329,6 +330,8 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
 
           return directHours > 0 ? points / directHours : 0
         }
+
+        return params.node?.aggData?.pph?.value;
       },
 
       valueFormatter: (params) => {
@@ -384,6 +387,8 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
 
           return totalHours > 0 ? (gapHours / totalHours) * 100 : 0
         }
+
+        return params.node?.aggData?.gapPercent?.value;
       },
 
       valueFormatter: (params) => {
@@ -440,6 +445,8 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
 
           return totalHours > 0 ? (directHours / totalHours) * 100 : 0
         }
+
+        return params.node?.aggData?.directPercent?.value;
       },
 
       valueFormatter: (params) => {
