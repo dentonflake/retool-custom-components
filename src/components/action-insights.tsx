@@ -12,8 +12,6 @@ export const ActionInsights = () => {
   const rowData = useMemo(() => rawRowData as ActionRow[], [JSON.stringify(rawRowData)]);
   const gridState = useMemo(() => rawGridState as GridState, [JSON.stringify(rawGridState)]);
 
-  console.log(gridState)
-
   return (
     <ActionInsightsGrid
       rowData={rowData}

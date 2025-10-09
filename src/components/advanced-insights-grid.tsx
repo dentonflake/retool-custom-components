@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
 import styles from '../styles/insights.module.css'
 import { AdvancedRow, AdvancedInsightsGridProps } from '../utils/definitions'
-import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
+import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation, kioskPercent, proactivePercent, reactivePercent, adminPercentAggregation, indirectPercentAggregation } from '../utils/aggregate-functions'
 
 import { AgGridReact } from 'ag-grid-react'
 import { AgChartsEnterpriseModule } from "ag-charts-enterprise"
@@ -279,7 +279,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       field: "kioskAssignments",
       headerName: "Kiosk Assignments",
       filter: "agNumberColumnFilter",
-      enableValue: true
+      enableValue: true,
     },
 
     {
@@ -294,6 +294,165 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       headerName: "Reactive Assignments",
       filter: "agNumberColumnFilter",
       enableValue: true
+    },
+
+    {
+      colId: "kioskPercent",
+      headerName: "Kiosk %",
+      filter: "agNumberColumnFilter",
+      allowedAggFuncs: ['kioskPercent'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const kioskAssignments = Number(params.data!.kioskAssignments) ?? 0
+          const totalAssignments = Number(params.data!.totalAssignments) ?? 0
+
+          return {
+            kioskAssignments,
+            totalAssignments,
+            value: totalAssignments > 0 ? (kioskAssignments / totalAssignments) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const kioskAssignments = Number(params.data!.kioskAssignments) ?? 0
+          const totalAssignments = Number(params.data!.totalAssignments) ?? 0
+
+          return totalAssignments > 0 ? (kioskAssignments / totalAssignments) * 100 : 0
+        }
+
+        return params.node?.aggData?.kioskPercent?.value;
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00%';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00%';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
+    },
+
+    {
+      colId: "proactivePercent",
+      headerName: "Proactive %",
+      filter: "agNumberColumnFilter",
+      allowedAggFuncs: ['proactivePercent'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const proactiveAssignments = Number(params.data!.proactiveAssignments) ?? 0
+          const totalAssignments = Number(params.data!.totalAssignments) ?? 0
+
+          return {
+            proactiveAssignments,
+            totalAssignments,
+            value: totalAssignments > 0 ? (proactiveAssignments / totalAssignments) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const proactiveAssignments = Number(params.data!.proactiveAssignments) ?? 0
+          const totalAssignments = Number(params.data!.totalAssignments) ?? 0
+
+          return totalAssignments > 0 ? (proactiveAssignments / totalAssignments) * 100 : 0
+        }
+
+        return params.node?.aggData?.proactivePercent?.value;
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00%';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00%';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
+    },
+
+    {
+      colId: "reactivePercent",
+      headerName: "Reactive %",
+      filter: "agNumberColumnFilter",
+      allowedAggFuncs: ['reactivePercent'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const reactiveAssignments = Number(params.data!.reactiveAssignments) ?? 0
+          const totalAssignments = Number(params.data!.totalAssignments) ?? 0
+
+          return {
+            reactiveAssignments,
+            totalAssignments,
+            value: totalAssignments > 0 ? (reactiveAssignments / totalAssignments) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const reactiveAssignments = Number(params.data!.reactiveAssignments) ?? 0
+          const totalAssignments = Number(params.data!.totalAssignments) ?? 0
+
+          return totalAssignments > 0 ? (reactiveAssignments / totalAssignments) * 100 : 0
+        }
+
+        return params.node?.aggData?.proactivePercent?.value;
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00%';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00%';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
     },
 
     {
@@ -355,63 +514,6 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
     },
 
     {
-      colId: 'gapPercent',
-      headerName: 'Gap %',
-      filter: 'agNumberColumnFilter',
-      allowedAggFuncs: ['gapPercentAggregation'],
-      enableValue: true,
-
-      valueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.type
-
-          const gapHours = type === 'gap' ? Number(params.data!.hours) ?? 0 : 0
-          const totalHours = Number(params.data!.hours) ?? 0
-
-          return {
-            gapHours,
-            totalHours,
-            value: totalHours > 0 ? (gapHours / totalHours) * 100 : 0
-          }
-        }
-      },
-
-      filterValueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.type
-
-          const gapHours = type === 'gap' ? params.data!.hours : 0
-          const totalHours = params.data!.hours
-
-          return totalHours > 0 ? (gapHours / totalHours) * 100 : 0
-        }
-
-        return params.node?.aggData?.gapPercent?.value;
-      },
-
-      valueFormatter: (params) => {
-
-        if (params.value == null) return '0.00';
-
-        if (params.value.hasOwnProperty('value')) {
-          return params.value.value.toFixed(2) + '%';
-        }
-
-        return '0.00';
-      },
-
-      comparator: (valueA, valueB) => {
-        
-        const numA = valueA?.value ?? 0;
-        const numB = valueB?.value ?? 0;
-
-        return numA - numB;
-      }
-    },
-
-    {
       colId: 'directPercent',
       headerName: 'Direct %',
       headerTooltip: 'Direct Hours / Total Hours',
@@ -451,13 +553,186 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
 
       valueFormatter: (params) => {
 
-        if (params.value == null) return '0.00';
+        if (params.value == null) return '0.00%';
 
         if (params.value.hasOwnProperty('value')) {
           return params.value.value.toFixed(2) + '%';
         }
 
-        return '0.00';
+        return '0.00%';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
+    },
+
+    {
+      colId: 'indirectPercent',
+      headerName: 'Indirect %',
+      headerTooltip: 'Indirect Hours / Total Hours',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['indirectPercentAggregation'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const indirectHours = type === 'Indirect' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return {
+            indirectHours,
+            totalHours,
+            value: totalHours > 0 ? (indirectHours / totalHours) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const indirectHours = type === 'Indirect' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return totalHours > 0 ? (indirectHours / totalHours) * 100 : 0
+        }
+
+        return params.node?.aggData?.indirectPercent?.value;
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00%';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00%';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
+    },
+
+    {
+      colId: 'adminPercent',
+      headerName: 'Admin %',
+      headerTooltip: 'Admin Hours / Total Hours',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['adminPercentAggregation'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const adminHours = type === 'Admin' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return {
+            adminHours,
+            totalHours,
+            value: totalHours > 0 ? (adminHours / totalHours) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.jobType
+
+          const adminHours = type === 'Admin' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return totalHours > 0 ? (adminHours / totalHours) * 100 : 0
+        }
+
+        return params.node?.aggData?.adminPercent?.value;
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00%';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00%';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
+    },
+
+    {
+      colId: 'gapPercent',
+      headerName: 'Gap %',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['gapPercentAggregation'],
+      enableValue: true,
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.type
+
+          const gapHours = type === 'gap' ? Number(params.data!.hours) ?? 0 : 0
+          const totalHours = Number(params.data!.hours) ?? 0
+
+          return {
+            gapHours,
+            totalHours,
+            value: totalHours > 0 ? (gapHours / totalHours) * 100 : 0
+          }
+        }
+      },
+
+      filterValueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const type = params.data!.type
+
+          const gapHours = type === 'gap' ? params.data!.hours : 0
+          const totalHours = params.data!.hours
+
+          return totalHours > 0 ? (gapHours / totalHours) * 100 : 0
+        }
+
+        return params.node?.aggData?.gapPercent?.value;
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0.00%';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value.toFixed(2) + '%';
+        }
+
+        return '0.00%';
       },
 
       comparator: (valueA, valueB) => {
@@ -487,7 +762,12 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
     distinctCount,
     pphAggregation,
     gapPercentAggregation,
-    directPercentAggregation
+    directPercentAggregation,
+    kioskPercent,
+    proactivePercent,
+    reactivePercent,
+    adminPercentAggregation,
+    indirectPercentAggregation
   }), [])
 
   // Theme of the grid
@@ -552,6 +832,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
 
           onStateUpdated={onStateUpdated}
           onFirstDataRendered={onFirstDataRendered}
+          // groupTotalRow={"bottom"}
         />
       </div>
 

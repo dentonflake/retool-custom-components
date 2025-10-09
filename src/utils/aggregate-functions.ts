@@ -2,6 +2,8 @@ import { IAggFuncParams } from 'ag-grid-community'
 
 export const distinctCount = (params: IAggFuncParams) => {
 
+  console.log(params)
+
   const values = params.values || []
   const unique = new Set()
 
@@ -43,6 +45,51 @@ export const pphAggregation = (params: IAggFuncParams) => {
   }
 }
 
+export const directPercentAggregation = (params: IAggFuncParams) => {
+
+  const { directHours, totalHours } = params.values.reduce((acc, value) => {
+    acc.directHours += value.directHours
+    acc.totalHours += value.totalHours
+    return acc
+  }, { directHours: 0, totalHours: 0 })
+
+  return {
+    directHours,
+    totalHours,
+    value: totalHours > 0 ? (directHours / totalHours) * 100 : 0
+  }
+}
+
+export const indirectPercentAggregation = (params: IAggFuncParams) => {
+
+  const { indirectHours, totalHours } = params.values.reduce((acc, value) => {
+    acc.indirectHours += value.indirectHours
+    acc.totalHours += value.totalHours
+    return acc
+  }, { indirectHours: 0, totalHours: 0 })
+
+  return {
+    indirectHours,
+    totalHours,
+    value: totalHours > 0 ? (indirectHours / totalHours) * 100 : 0
+  }
+}
+
+export const adminPercentAggregation = (params: IAggFuncParams) => {
+
+  const { adminHours, totalHours } = params.values.reduce((acc, value) => {
+    acc.adminHours += value.adminHours
+    acc.totalHours += value.totalHours
+    return acc
+  }, { adminHours: 0, totalHours: 0 })
+
+  return {
+    adminHours,
+    totalHours,
+    value: totalHours > 0 ? (adminHours / totalHours) * 100 : 0
+  }
+}
+
 export const gapPercentAggregation = (params: IAggFuncParams) => {
 
   const { gapHours, totalHours } = params.values.reduce((acc, value) => {
@@ -58,17 +105,47 @@ export const gapPercentAggregation = (params: IAggFuncParams) => {
   }
 }
 
-export const directPercentAggregation = (params: IAggFuncParams) => {
+export const kioskPercent = (params: IAggFuncParams) => {
 
-  const { directHours, totalHours } = params.values.reduce((acc, value) => {
-    acc.directHours += value.directHours
-    acc.totalHours += value.totalHours
+  const { kioskAssignments, totalAssignments } = params.values.reduce((acc, value) => {
+    acc.kioskAssignments += value.kioskAssignments
+    acc.totalAssignments += value.totalAssignments
     return acc
-  }, { directHours: 0, totalHours: 0 })
+  }, { kioskAssignments: 0, totalAssignments: 0 })
 
   return {
-    directHours,
-    totalHours,
-    value: totalHours > 0 ? (directHours / totalHours) * 100 : 0
+    kioskAssignments,
+    totalAssignments,
+    value: totalAssignments > 0 ? (kioskAssignments / totalAssignments) * 100 : 0
+  }
+}
+
+export const proactivePercent = (params: IAggFuncParams) => {
+  
+  const { proactiveAssignments, totalAssignments } = params.values.reduce((acc, value) => {
+    acc.proactiveAssignments += value.proactiveAssignments
+    acc.totalAssignments += value.totalAssignments
+    return acc
+  }, { proactiveAssignments: 0, totalAssignments: 0 })
+
+  return {
+    proactiveAssignments,
+    totalAssignments,
+    value: totalAssignments > 0 ? (proactiveAssignments / totalAssignments) * 100 : 0
+  }
+}
+
+export const reactivePercent = (params: IAggFuncParams) => {
+  
+  const { reactiveAssignments, totalAssignments } = params.values.reduce((acc, value) => {
+    acc.reactiveAssignments += value.reactiveAssignments
+    acc.totalAssignments += value.totalAssignments
+    return acc
+  }, { reactiveAssignments: 0, totalAssignments: 0 })
+
+  return {
+    reactiveAssignments,
+    totalAssignments,
+    value: totalAssignments > 0 ? (reactiveAssignments / totalAssignments) * 100 : 0
   }
 }

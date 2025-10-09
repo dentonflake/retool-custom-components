@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
 import styles from '../styles/insights.module.css'
 import { ActionRow, ActionInsightsGridProps } from '../utils/definitions'
-import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
+// import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
 
 import { AgGridReact } from 'ag-grid-react'
 import { AgChartsEnterpriseModule } from "ag-charts-enterprise"
@@ -118,7 +118,24 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       filter: true,
       enablePivot: true,
       enableRowGroup: true,
-      sort: 'asc'
+      sort: 'asc',
+
+      comparator: (a: string, b: string) => {
+        const parseHour = (val: string): number => {
+          if (!val) return -1;
+          const [hourStr, meridian] = val.split(" ");
+          let hour = parseInt(hourStr, 10);
+
+          if (meridian === "AM") {
+            if (hour === 12) hour = 0;
+          } else if (meridian === "PM") {
+            if (hour !== 12) hour += 12;
+          }
+          return hour;
+        };
+
+        return parseHour(a) - parseHour(b);
+      },
     },
 
     {
@@ -289,10 +306,10 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
 
   // Aggregate functions
   const aggFuncs = useMemo(() => ({
-    distinctCount,
-    pphAggregation,
-    gapPercentAggregation,
-    directPercentAggregation
+    // distinctCount,
+    // pphAggregation,
+    // gapPercentAggregation,
+    // directPercentAggregation
   }), [])
 
   // Theme of the grid
@@ -347,7 +364,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
           columnDefs={colDefs}
           defaultColDef={defaultColDef}
 
-          aggFuncs={aggFuncs}
+          // aggFuncs={aggFuncs}
           suppressAggFuncInHeader={true}
 
           sideBar
