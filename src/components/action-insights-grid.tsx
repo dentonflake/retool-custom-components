@@ -3,7 +3,7 @@ import { Retool } from '@tryretool/custom-component-support'
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
 import styles from '../styles/insights.module.css'
-import { AdvancedRow, AdvancedInsightsGridProps } from '../utils/definitions'
+import { ActionRow, ActionInsightsGridProps } from '../utils/definitions'
 import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
 
 import { AgGridReact } from 'ag-grid-react'
@@ -14,16 +14,16 @@ import { ColDef, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQua
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule, IntegratedChartsModule.with(AgChartsEnterpriseModule)])
 LicenseManager.setLicenseKey("Using_this_{AG_Charts_and_AG_Grid}_Enterprise_key_{AG-103378}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{Nellis_Auction}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{nellis}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{nellis}_need_to_be_licensed___{nellis}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Charts_and_AG_Grid}_Enterprise_versions_released_before_{11_September_2026}____[v3]_[0102]_MTc4OTA4MTIwMDAwMA==67f362d278f6fbbb12fe215d38e32531")
 
-const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps) => {
+const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => {
 
   // Retool state outputs
   const [currentGridState, setCurrentGridState] = Retool.useStateObject({ name: "currentGridState", inspector: "hidden", initialValue: {} })
 
   // Reference to the AG Grid table
-  const gridRef = useRef<AgGridReact<AdvancedRow>>(null);
+  const gridRef = useRef<AgGridReact<ActionRow>>(null);
 
   // Holds the state of the column definitions.
-  const [colDefs] = useState<ColDef<AdvancedRow>[]>([
+  const [colDefs] = useState<ColDef<ActionRow>[]>([
 
     {
       field: "year",
@@ -111,6 +111,25 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
     },
 
     {
+      field: "hour",
+      headerName: "Hour",
+      headerTooltip: "Hour",
+      initialPivot: true,
+      filter: true,
+      enablePivot: true,
+      enableRowGroup: true,
+      sort: 'asc'
+    },
+
+    {
+      field: "createdAt",
+      headerName: "Created At",
+      filter: true,
+      enablePivot: true,
+      enableRowGroup: true,
+    },
+
+    {
       field: "location",
       headerName: "Location",
       filter: "agSetColumnFilter",
@@ -192,281 +211,67 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
     },
 
     {
-      field: "type",
-      headerName: "Type",
-      filter: "agSetColumnFilter",
+      field: "logType",
+      headerName: "Log Type",
+      headerTooltip: "Log Type",
+      filter: true,
       enablePivot: true,
       enableRowGroup: true
     },
 
     {
-      field: "job",
-      headerName: "Job",
-      filter: "agSetColumnFilter",
+      field: "itemId",
+      headerName: "Item Id",
+      headerTooltip: "Item Id",
+      filter: true,
+      enablePivot: true,
+      enableRowGroup: true
+    },
+
+    {
+      field: "action",
+      headerName: "Action",
+      headerTooltip: "Action",
+      filter: true,
+      initialRowGroup: true,
       enablePivot: true,
       enableRowGroup: true,
+      enableValue: true,
+      aggFunc: 'count',
+      allowedAggFuncs: ['count']
     },
 
     {
-      field: "department",
-      headerName: "Department",
-      filter: "agSetColumnFilter",
+      field: "program",
+      headerName: "Program",
+      headerTooltip: "Program",
+      filter: true,
       enablePivot: true,
       enableRowGroup: true,
+      enableValue: true,
+      allowedAggFuncs: ['count']
     },
 
     {
-      field: "area",
-      headerName: "Area",
-      filter: "agSetColumnFilter",
+      field: "programType",
+      headerName: "Program Type",
+      headerTooltip: "Program Type",
+      filter: true,
       enablePivot: true,
       enableRowGroup: true,
+      enableValue: true,
+      allowedAggFuncs: ['count']
     },
 
     {
-      field: "jobType",
-      headerName: "Job Type",
-      filter: "agSetColumnFilter",
+      field: "size",
+      headerName: "Size",
+      headerTooltip: "Size",
+      filter: true,
       enablePivot: true,
       enableRowGroup: true,
-    },
-
-    {
-      field: "hours",
-      headerName: "Hours",
-      filter: "agNumberColumnFilter",
       enableValue: true,
-      valueFormatter: params => params.value && params.value.toFixed(2)
-    },
-
-    {
-      field: "points",
-      headerName: "Points",
-      filter: "agNumberColumnFilter",
-      enableValue: true,
-      valueFormatter: params => params.value && params.value.toFixed(0)
-    },
-
-    {
-      field: "actions",
-      headerName: "Actions",
-      filter: "agNumberColumnFilter",
-      enableValue: true
-    },
-
-    {
-      field: "jobActions",
-      headerName: "Job Actions",
-      filter: "agNumberColumnFilter",
-      enableValue: true
-    },
-
-    {
-      field: "nonJobActions",
-      headerName: "Non-Job Actions",
-      filter: "agNumberColumnFilter",
-      enableValue: true
-    },
-
-    {
-      field: "totalAssignments",
-      headerName: "Total Assignments",
-      filter: "agNumberColumnFilter",
-      enableValue: true,
-    },
-
-    {
-      field: "kioskAssignments",
-      headerName: "Kiosk Assignments",
-      filter: "agNumberColumnFilter",
-      enableValue: true
-    },
-
-    {
-      field: "proactiveAssignments",
-      headerName: "Proactive Assignments",
-      filter: "agNumberColumnFilter",
-      enableValue: true
-    },
-
-    {
-      field: "reactiveAssignments",
-      headerName: "Reactive Assignments",
-      filter: "agNumberColumnFilter",
-      enableValue: true
-    },
-
-    {
-      colId: 'pph',
-      headerName: 'PPH',
-      filter: 'agNumberColumnFilter',
-      allowedAggFuncs: ['pphAggregation'],
-      enableValue: true,
-
-      valueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data?.jobType
-
-          const points = Number(params.data?.points) ?? 0
-          const directHours = type === 'Direct' ? Number(params.data?.hours) ?? 0 : 0
-
-          return {
-            points,
-            directHours,
-            value: directHours > 0 ? points / directHours : 0
-          }
-        }
-      },
-
-
-      filterValueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.jobType
-
-          const points = Number(params.data?.points) ?? 0
-          const directHours = type === 'Direct' ? Number(params.data?.hours) ?? 0 : 0
-
-          return directHours > 0 ? points / directHours : 0
-        }
-
-        return params.node?.aggData?.pph?.value;
-      },
-
-      valueFormatter: (params) => {
-
-        if (params.value == null) return '0';
-
-        if (params.value.hasOwnProperty('value')) {
-          return params.value.value.toFixed(0);
-        }
-
-        return '0';
-      },
-
-      comparator: (valueA, valueB) => {
-        
-        const numA = valueA?.value ?? 0;
-        const numB = valueB?.value ?? 0;
-
-        return numA - numB;
-      }
-    },
-
-    {
-      colId: 'gapPercent',
-      headerName: 'Gap %',
-      filter: 'agNumberColumnFilter',
-      allowedAggFuncs: ['gapPercentAggregation'],
-      enableValue: true,
-
-      valueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.type
-
-          const gapHours = type === 'gap' ? Number(params.data!.hours) ?? 0 : 0
-          const totalHours = Number(params.data!.hours) ?? 0
-
-          return {
-            gapHours,
-            totalHours,
-            value: totalHours > 0 ? (gapHours / totalHours) * 100 : 0
-          }
-        }
-      },
-
-      filterValueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.type
-
-          const gapHours = type === 'gap' ? params.data!.hours : 0
-          const totalHours = params.data!.hours
-
-          return totalHours > 0 ? (gapHours / totalHours) * 100 : 0
-        }
-
-        return params.node?.aggData?.gapPercent?.value;
-      },
-
-      valueFormatter: (params) => {
-
-        if (params.value == null) return '0.00';
-
-        if (params.value.hasOwnProperty('value')) {
-          return params.value.value.toFixed(2) + '%';
-        }
-
-        return '0.00';
-      },
-
-      comparator: (valueA, valueB) => {
-        
-        const numA = valueA?.value ?? 0;
-        const numB = valueB?.value ?? 0;
-
-        return numA - numB;
-      }
-    },
-
-    {
-      colId: 'directPercent',
-      headerName: 'Direct %',
-      headerTooltip: 'Direct Hours / Total Hours',
-      filter: 'agNumberColumnFilter',
-      allowedAggFuncs: ['directPercentAggregation'],
-      enableValue: true,
-
-      valueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.jobType
-
-          const directHours = type === 'Direct' ? Number(params.data!.hours) ?? 0 : 0
-          const totalHours = Number(params.data!.hours) ?? 0
-
-          return {
-            directHours,
-            totalHours,
-            value: totalHours > 0 ? (directHours / totalHours) * 100 : 0
-          }
-        }
-      },
-
-      filterValueGetter: (params) => {
-        if (!(params.node && params.node.group)) {
-
-          const type = params.data!.jobType
-
-          const directHours = type === 'Direct' ? Number(params.data!.hours) ?? 0 : 0
-          const totalHours = Number(params.data!.hours) ?? 0
-
-          return totalHours > 0 ? (directHours / totalHours) * 100 : 0
-        }
-
-        return params.node?.aggData?.directPercent?.value;
-      },
-
-      valueFormatter: (params) => {
-
-        if (params.value == null) return '0.00';
-
-        if (params.value.hasOwnProperty('value')) {
-          return params.value.value.toFixed(2) + '%';
-        }
-
-        return '0.00';
-      },
-
-      comparator: (valueA, valueB) => {
-        
-        const numA = valueA?.value ?? 0;
-        const numB = valueB?.value ?? 0;
-
-        return numA - numB;
-      }
+      allowedAggFuncs: ['count']
     }
   ])
 
@@ -511,7 +316,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       const gridState = gridRef.current!.api.getState();
       setCurrentGridState(gridState as Retool.SerializableObject);
     }, 200);
-    
+
   }, []);
 
   const onFirstDataRendered = () => {
@@ -559,4 +364,4 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
   )
 }
 
-export default AdvancedInsightsGrid
+export default ActionInsightsGrid
