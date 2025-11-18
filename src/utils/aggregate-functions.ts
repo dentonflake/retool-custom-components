@@ -1,32 +1,23 @@
 import { IAggFuncParams } from 'ag-grid-community'
 
-export const distinctCount = (params: IAggFuncParams) => {
+export const distinctEmployees = (params: IAggFuncParams) => {
 
-  console.log(params)
-
-  const values = params.values || []
-  const unique = new Set()
-
-  if (params.rowNode.leafGroup) {
-    for (const value of values) {
-      if (value !== null) {
-        unique.add(value)
-      }
-    }
-  } else {
-    for (const value of values) {
-      if (value.unique instanceof Set) {
-        for (const id of value.unique) {
-          unique.add(id);
-        }
-      }
-    }
-  }
+  const cargoIds = params.values.map(value => value.cargoIds).flat()
+  const uniqueCargoIds = new Set<number>(cargoIds)
 
   return {
-    unique,
-    value: unique.size,
-    toString: () => String(unique.size)
+    cargoIds,
+    value: uniqueCargoIds.size
+  }
+};
+
+export const actionCount = (params: IAggFuncParams) => {
+
+  const actions = params.values.map(value => value.actions).flat()
+
+  return {
+    actions,
+    value: actions.length
   }
 };
 

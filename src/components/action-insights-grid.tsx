@@ -4,7 +4,8 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
 import styles from '../styles/insights.module.css'
 import { ActionRow, ActionInsightsGridProps } from '../utils/definitions'
-// import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation } from '../utils/aggregate-functions'
+import { actionCount, distinctEmployees } from '../utils/aggregate-functions'
+import { parseHour } from '../utils/helper-functions'
 
 import { AgGridReact } from 'ag-grid-react'
 import { AgChartsEnterpriseModule } from "ag-charts-enterprise"
@@ -29,7 +30,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       field: "year",
       headerName: "Year",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
     },
@@ -38,7 +39,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       field: "month",
       headerName: "Month",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
 
@@ -70,7 +71,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       field: "week",
       headerName: "Week",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
     },
@@ -79,7 +80,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       field: "day",
       headerName: "Day",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
 
@@ -105,37 +106,19 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       field: "date",
       headerName: "Date",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
     },
 
     {
-      field: "hour",
-      headerName: "Hour",
-      headerTooltip: "Hour",
-      initialPivot: true,
-      filter: true,
+      field: 'hour',
+      headerName: 'Hour',
+      filter: 'agSetColumnFilter',
+      sort: 'asc',
       enablePivot: true,
       enableRowGroup: true,
-      sort: 'asc',
-
-      comparator: (a: string, b: string) => {
-        const parseHour = (val: string): number => {
-          if (!val) return -1;
-          const [hourStr, meridian] = val.split(" ");
-          let hour = parseInt(hourStr, 10);
-
-          if (meridian === "AM") {
-            if (hour === 12) hour = 0;
-          } else if (meridian === "PM") {
-            if (hour !== 12) hour += 12;
-          }
-          return hour;
-        };
-
-        return parseHour(a) - parseHour(b);
-      },
+      comparator: (a: string, b: string) => parseHour(a) - parseHour(b),
     },
 
     {
@@ -191,8 +174,49 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       headerName: "Employee",
       filter: "agSetColumnFilter",
       enablePivot: true,
-      enableRowGroup: true,
-      enableValue: true
+      enableRowGroup: true
+    },
+
+    {
+      colId: "distinctEmployees",
+      headerName: "Distinct Employees",
+      filter: "agNumberColumnFilter",
+      allowedAggFuncs: ['distinctEmployees'],
+      enableValue: true,
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      },
+
+      // Leaf rows: return the raw cargoId number
+      valueGetter: (params) => {
+
+        if (!(params.node && params.node.group)) {
+
+          const cargoIds = [Number(params.data!.cargoId) ?? 0]
+          const uniqueCargoIds = new Set(cargoIds)
+
+          return {
+            cargoIds,
+            value: uniqueCargoIds.size
+          }
+        }
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value;
+        }
+
+        return '0';
+      },
     },
 
     {
@@ -250,12 +274,47 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
       headerName: "Action",
       headerTooltip: "Action",
       filter: true,
-      initialRowGroup: true,
       enablePivot: true,
       enableRowGroup: true,
+    },
+
+    {
+      colId: 'actionCount',
+      headerName: 'Action Count',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['actionCount'],
       enableValue: true,
-      aggFunc: 'count',
-      allowedAggFuncs: ['count']
+
+      valueGetter: (params) => {
+        if (!(params.node && params.node.group)) {
+
+          const actions = [params.data!.action]
+
+          return {
+            actions,
+            value: actions.length
+          }
+        }
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value;
+        }
+
+        return '0';
+      },
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      }
     },
 
     {
@@ -306,10 +365,8 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
 
   // Aggregate functions
   const aggFuncs = useMemo(() => ({
-    // distinctCount,
-    // pphAggregation,
-    // gapPercentAggregation,
-    // directPercentAggregation
+    distinctEmployees,
+    actionCount
   }), [])
 
   // Theme of the grid
@@ -364,7 +421,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
           columnDefs={colDefs}
           defaultColDef={defaultColDef}
 
-          // aggFuncs={aggFuncs}
+          aggFuncs={aggFuncs}
           suppressAggFuncInHeader={true}
 
           sideBar
@@ -374,6 +431,7 @@ const ActionInsightsGrid = ({ rowData, gridState }: ActionInsightsGridProps) => 
 
           onStateUpdated={onStateUpdated}
           onFirstDataRendered={onFirstDataRendered}
+          pivotRowTotals={"before"}
         />
       </div>
 

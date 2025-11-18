@@ -6,6 +6,7 @@ export type AdvancedRow = {
   month: string
   week: string
   day: string
+  hour: string
   date: string
   location: string
   cargoId: number

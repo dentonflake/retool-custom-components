@@ -4,7 +4,8 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 
 import styles from '../styles/insights.module.css'
 import { AdvancedRow, AdvancedInsightsGridProps } from '../utils/definitions'
-import { distinctCount, pphAggregation, gapPercentAggregation, directPercentAggregation, kioskPercent, proactivePercent, reactivePercent, adminPercentAggregation, indirectPercentAggregation } from '../utils/aggregate-functions'
+import { distinctEmployees, pphAggregation, gapPercentAggregation, directPercentAggregation, kioskPercent, proactivePercent, reactivePercent, adminPercentAggregation, indirectPercentAggregation } from '../utils/aggregate-functions'
+import { parseHour } from '../utils/helper-functions'
 
 import { AgGridReact } from 'ag-grid-react'
 import { AgChartsEnterpriseModule } from "ag-charts-enterprise"
@@ -29,7 +30,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       field: "year",
       headerName: "Year",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
     },
@@ -38,7 +39,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       field: "month",
       headerName: "Month",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
 
@@ -70,7 +71,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       field: "week",
       headerName: "Week",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
     },
@@ -79,7 +80,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       field: "day",
       headerName: "Day",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
 
@@ -105,9 +106,19 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       field: "date",
       headerName: "Date",
       filter: "agSetColumnFilter",
-      sort: "desc",
+      sort: "asc",
       enablePivot: true,
       enableRowGroup: true,
+    },
+
+    {
+      field: 'hour',
+      headerName: 'Hour',
+      filter: 'agSetColumnFilter',
+      sort: 'asc',
+      enablePivot: true,
+      enableRowGroup: true,
+      comparator: (a: string, b: string) => parseHour(a) - parseHour(b)
     },
 
     {
@@ -155,8 +166,49 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
       headerName: "Employee",
       filter: "agSetColumnFilter",
       enablePivot: true,
-      enableRowGroup: true,
-      enableValue: true
+      enableRowGroup: true
+    },
+
+    {
+      colId: "distinctEmployees",
+      headerName: "Distinct Employees",
+      filter: "agNumberColumnFilter",
+      allowedAggFuncs: ['distinctEmployees'],
+      enableValue: true,
+
+      comparator: (valueA, valueB) => {
+        
+        const numA = valueA?.value ?? 0;
+        const numB = valueB?.value ?? 0;
+
+        return numA - numB;
+      },
+
+      // Leaf rows: return the raw cargoId number
+      valueGetter: (params) => {
+
+        if (!(params.node && params.node.group)) {
+
+          const cargoIds = [Number(params.data!.cargoId) ?? 0]
+          const uniqueCargoIds = new Set(cargoIds)
+
+          return {
+            cargoIds,
+            value: uniqueCargoIds.size
+          }
+        }
+      },
+
+      valueFormatter: (params) => {
+
+        if (params.value == null) return '0';
+
+        if (params.value.hasOwnProperty('value')) {
+          return params.value.value;
+        }
+
+        return '0';
+      },
     },
 
     {
@@ -759,7 +811,7 @@ const AdvancedInsightsGrid = ({ rowData, gridState }: AdvancedInsightsGridProps)
 
   // Aggregate functions
   const aggFuncs = useMemo(() => ({
-    distinctCount,
+    distinctEmployees,
     pphAggregation,
     gapPercentAggregation,
     directPercentAggregation,
