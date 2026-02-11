@@ -87,7 +87,6 @@ export type LocationRow = {
   department?: string
   areaId?: number
   area?: string
-  supportPPHGoal?: number
   supportGoalPointsPerHour?: number
   hours: number
   directHours: number

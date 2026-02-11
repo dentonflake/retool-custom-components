@@ -108,7 +108,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
 
   const getSupportGoalPPH = useCallback((row?: LocationRow) => {
     if (!row) return 0
-    return Number(row.supportGoalPointsPerHour ?? row.supportPPHGoal) || 0
+    return Number(row.supportGoalPointsPerHour) || 0
   }, [])
 
   const getGoalRateSPP = useCallback((row?: LocationRow) => {
@@ -418,23 +418,6 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     },
 
     {
-      field: "supportPPHGoal",
-      headerName: "Support PPH Goal",
-      filter: "agNumberColumnFilter",
-      enableValue: true,
-      valueGetter: params => Number(params.data?.supportGoalPointsPerHour ?? params.data?.supportPPHGoal) || 0,
-      valueFormatter: params => params.value && params.value.toFixed(2)
-    },
-
-    {
-      field: "hours",
-      headerName: "Hours",
-      filter: "agNumberColumnFilter",
-      enableValue: true,
-      valueFormatter: params => params.value && params.value.toFixed(2)
-    },
-
-    {
       field: "directHours",
       headerName: "Direct Hours",
       filter: "agNumberColumnFilter",
@@ -537,6 +520,20 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     },
 
     {
+      colId: 'goalRateSPP',
+      headerName: 'Goal Rate (SPP)',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Target seconds per point' },
+      autoHeaderHeight: true,
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['goalRateSPPAggregation'],
+      aggFunc: 'goalRateSPPAggregation',
+      enableValue: true,
+      valueGetter: params => getGoalRateSPP(params.data),
+      valueFormatter: params => Number(params.value || 0).toFixed(2)
+    },
+
+    {
       colId: 'actualPPH',
       headerName: 'Actual Rate (PPH)',
       headerComponent: HeaderWithCaption,
@@ -556,20 +553,6 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     },
 
     {
-      colId: 'goalRateSPP',
-      headerName: 'Goal Rate (SPP)',
-      headerComponent: HeaderWithCaption,
-      headerComponentParams: { caption: 'Target seconds per point' },
-      autoHeaderHeight: true,
-      filter: 'agNumberColumnFilter',
-      allowedAggFuncs: ['goalRateSPPAggregation'],
-      aggFunc: 'goalRateSPPAggregation',
-      enableValue: true,
-      valueGetter: params => getGoalRateSPP(params.data),
-      valueFormatter: params => Number(params.value || 0).toFixed(2)
-    },
-
-    {
       colId: 'goalRatePPH',
       headerName: 'Goal Rate (PPH)',
       headerComponent: HeaderWithCaption,
@@ -581,6 +564,17 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       enableValue: true,
       valueGetter: params => getGoalRatePPH(params.data),
       valueFormatter: params => Number(params.value || 0).toFixed(2)
+    },
+
+    {
+      field: "hours",
+      headerName: "Actual Hours",
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Total worked hours' },
+      autoHeaderHeight: true,
+      filter: "agNumberColumnFilter",
+      enableValue: true,
+      valueFormatter: params => params.value && params.value.toFixed(2)
     },
 
     {
@@ -648,7 +642,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
   // Adds additional defaults to each column definition
   const defaultColDef = useMemo(() => ({
     flex: 1,
-    minWidth: 200,
+    minWidth: 175,
     filterParams: {
       buttons: ["reset"]
     },
