@@ -1,6 +1,7 @@
 
 import { Retool } from '@tryretool/custom-component-support'
 import { useMemo, useCallback, useRef, useEffect } from 'react'
+import type { KeyboardEventHandler } from 'react'
 
 import styles from '../styles/insights.module.css'
 import { LocationRow, LocationInsightsGridProps } from '../utils/definitions'
@@ -8,10 +9,33 @@ import { LocationRow, LocationInsightsGridProps } from '../utils/definitions'
 import { AgGridReact } from 'ag-grid-react'
 import { AgChartsEnterpriseModule } from "ag-charts-enterprise"
 import { LicenseManager, AllEnterpriseModule, IntegratedChartsModule } from 'ag-grid-enterprise'
-import { ColDef, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQuartz, IAggFuncParams } from 'ag-grid-community'
+import { ColDef, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQuartz, IAggFuncParams, IHeaderParams } from 'ag-grid-community'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule, IntegratedChartsModule.with(AgChartsEnterpriseModule)])
 LicenseManager.setLicenseKey("Using_this_{AG_Charts_and_AG_Grid}_Enterprise_key_{AG-103378}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{Nellis_Auction}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{nellis}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{nellis}_need_to_be_licensed___{nellis}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Charts_and_AG_Grid}_Enterprise_versions_released_before_{11_September_2026}____[v3]_[0102]_MTc4OTA4MTIwMDAwMA==67f362d278f6fbbb12fe215d38e32531")
+
+type HeaderWithCaptionProps = IHeaderParams & {
+  caption?: string
+}
+
+const HeaderWithCaption = (props: HeaderWithCaptionProps) => {
+  const onSort = () => {
+    if (props.enableSorting) props.progressSort(false)
+  }
+
+  const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    onSort()
+  }
+
+  return (
+    <div className={styles.captionHeader} onClick={onSort} onKeyDown={onKeyDown} role="button" tabIndex={0}>
+      <span className={styles.captionHeaderTitle}>{props.displayName}</span>
+      {props.caption && <span className={styles.captionHeaderSubtitle}>{props.caption}</span>}
+    </div>
+  )
+}
 
 const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps) => {
 
@@ -109,6 +133,41 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
 
     return 0
   }, [getSupportGoalPPH])
+
+  const getGoalStatusStyle = useCallback((isMeetingGoal: boolean | null) => {
+    if (isMeetingGoal == null) return undefined
+    return isMeetingGoal
+      ? { color: '#15803d', fontWeight: 600 }
+      : { color: '#dc2626', fontWeight: 600 }
+  }, [])
+
+  const isMeetingGoalSPP = useCallback((params: { value: unknown; data?: LocationRow; node?: { group?: boolean; aggData?: Record<string, unknown> } }) => {
+    if (params.node?.group) {
+      const actualValue = Number((params.node.aggData?.actualRateMPP as { value?: number } | undefined)?.value ?? 0)
+      const goalValue = Number(params.node.aggData?.goalRateSPP ?? 0)
+      if (goalValue <= 0) return null
+      return actualValue <= goalValue
+    }
+
+    const actualValue = Number(params.value ?? 0)
+    const goalValue = getGoalRateSPP(params.data)
+    if (goalValue <= 0) return null
+    return actualValue <= goalValue
+  }, [getGoalRateSPP])
+
+  const isMeetingGoalPPH = useCallback((params: { value: unknown; data?: LocationRow; node?: { group?: boolean; aggData?: Record<string, unknown> } }) => {
+    if (params.node?.group) {
+      const actualValue = Number(params.node.aggData?.actualPPH ?? 0)
+      const goalValue = Number(params.node.aggData?.goalRatePPH ?? 0)
+      if (goalValue <= 0) return null
+      return actualValue >= goalValue
+    }
+
+    const actualValue = Number(params.value ?? 0)
+    const goalValue = getGoalRatePPH(params.data)
+    if (goalValue <= 0) return null
+    return actualValue >= goalValue
+  }, [getGoalRatePPH])
 
   const aggregateMetrics = useCallback((params: IAggFuncParams) => {
     const leaves = params.rowNode?.allLeafChildren ?? []
@@ -413,10 +472,14 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'actualRateMPP',
       headerName: 'Actual Rate (SPP)',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Seconds per point' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['actualRateMPPAggregation'],
       aggFunc: 'actualRateMPPAggregation',
       enableValue: true,
+      cellStyle: params => getGoalStatusStyle(isMeetingGoalSPP(params)),
 
       valueGetter: (params) => {
         if (!(params.node && params.node.group)) {
@@ -476,10 +539,14 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'actualPPH',
       headerName: 'Actual Rate (PPH)',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Points per hour' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['actualPPHAggregation'],
       aggFunc: 'actualPPHAggregation',
       enableValue: true,
+      cellStyle: params => getGoalStatusStyle(isMeetingGoalPPH(params)),
       valueGetter: (params) => {
         const points = getEffectivePoints(params.data)
         const hours = Number(params.data?.hours) || 0
@@ -491,6 +558,9 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'goalRateSPP',
       headerName: 'Goal Rate (SPP)',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Target seconds per point' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['goalRateSPPAggregation'],
       aggFunc: 'goalRateSPPAggregation',
@@ -502,6 +572,9 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'goalRatePPH',
       headerName: 'Goal Rate (PPH)',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Target points per hour' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['goalRatePPHAggregation'],
       aggFunc: 'goalRatePPHAggregation',
@@ -513,6 +586,9 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'goalHours',
       headerName: 'Goal Hours',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Expected hours at goal rate' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['goalHoursAggregation'],
       aggFunc: 'goalHoursAggregation',
@@ -528,10 +604,14 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'hoursDelta',
       headerName: 'Hours delta',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Goal hours minus actual hours' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['hoursDeltaAggregation'],
       aggFunc: 'hoursDeltaAggregation',
       enableValue: true,
+      cellStyle: params => getGoalStatusStyle(Number(params.value ?? 0) >= 0),
       valueGetter: (params) => {
         const points = getEffectivePoints(params.data)
         const goalRateSPP = getGoalRateSPP(params.data)
@@ -545,10 +625,14 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       colId: 'pctToGoal',
       headerName: 'PCT to Goal',
+      headerComponent: HeaderWithCaption,
+      headerComponentParams: { caption: 'Goal hours divided by actual hours' },
+      autoHeaderHeight: true,
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['pctToGoalAggregation'],
       aggFunc: 'pctToGoalAggregation',
       enableValue: true,
+      cellStyle: params => getGoalStatusStyle(Number(params.value ?? 0) >= 100),
       valueGetter: (params) => {
         const points = getEffectivePoints(params.data)
         const goalRateSPP = getGoalRateSPP(params.data)
