@@ -71,3 +71,31 @@ export type ActionInsightsGridProps = {
   gridState: GridState
   setState?: (updates: Retool.SerializableObject) => void
 }
+
+export type LocationRow = {
+  date?: string
+  locationId: number
+  location: string
+  type: string
+  jobId?: number
+  job?: string
+  jobTypeId?: number
+  jobType?: string
+  laborType?: string
+  teamId?: number
+  departmentId?: number
+  department?: string
+  areaId?: number
+  area?: string
+  hours: number
+  directHours: number
+  supportHours: number
+  gapHours: number
+  points: number
+}
+
+export type LocationInsightsGridProps = {
+  rowData: LocationRow[]
+  gridState: GridState
+  setState?: (updates: Retool.SerializableObject) => void
+}

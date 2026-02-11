@@ -140,3 +140,25 @@ export const reactivePercent = (params: IAggFuncParams) => {
     value: totalAssignments > 0 ? (reactiveAssignments / totalAssignments) * 100 : 0
   }
 }
+
+export const actualRateMPPAggregation = (params: IAggFuncParams) => {
+
+  const { points, hours } = params.values.reduce((acc, value) => {
+
+    acc.points += value.points
+    acc.hours += value.hours
+
+    return acc
+
+  }, { points: 0, hours: 0 })
+
+  const value = points > 0
+    ? (hours * 60) / points
+    : 0;
+
+  return {
+    points,
+    hours,
+    value
+  }
+}
