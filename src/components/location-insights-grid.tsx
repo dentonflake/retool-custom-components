@@ -87,15 +87,25 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     return Number(row.supportGoalPointsPerHour ?? row.supportPPHGoal) || 0
   }, [])
 
-  const getGoalRateMPP = useCallback((row?: LocationRow) => {
+  const getGoalRateSPP = useCallback((row?: LocationRow) => {
     if (!row) return 0
 
     const laborType = String(row.laborType ?? '').trim().toLowerCase()
-    if (laborType === 'direct') return 0.6
+    if (laborType === 'direct') return 36
     if (laborType === 'support') {
       const supportGoalPPH = getSupportGoalPPH(row)
-      return supportGoalPPH > 0 ? 60 / supportGoalPPH : 0
+      return supportGoalPPH > 0 ? 3600 / supportGoalPPH : 0
     }
+
+    return 0
+  }, [getSupportGoalPPH])
+
+  const getGoalRatePPH = useCallback((row?: LocationRow) => {
+    if (!row) return 0
+
+    const laborType = String(row.laborType ?? '').trim().toLowerCase()
+    if (laborType === 'direct') return 100
+    if (laborType === 'support') return getSupportGoalPPH(row)
 
     return 0
   }, [getSupportGoalPPH])
@@ -127,8 +137,8 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       const laborType = String(data.laborType ?? '').trim().toLowerCase()
       const points = getEffectivePoints(data)
       const hours = Number(data.hours) || 0
-      const goalRateMPP = getGoalRateMPP(data)
-      const goalHours = points > 0 ? (goalRateMPP * points) / 60 : 0
+      const goalRateSPP = getGoalRateSPP(data)
+      const goalHours = points > 0 ? (goalRateSPP * points) / 3600 : 0
       const bucket = sumsByKey.get(key) ?? {
         directPoints: 0,
         supportPoints: 0,
@@ -183,7 +193,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       hours,
       goalHours
     }
-  }, [buildPointsKey, getEffectivePoints, getGoalRateMPP])
+  }, [buildPointsKey, getEffectivePoints, getGoalRateSPP])
 
   const pointsAggregation = useCallback((params: IAggFuncParams) => {
     return aggregateMetrics(params).points
@@ -193,7 +203,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     const { points, hours } = aggregateMetrics(params)
 
     const value = points > 0
-      ? (hours * 60) / points
+      ? (hours * 3600) / points
       : 0
 
     return {
@@ -203,9 +213,19 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     }
   }, [aggregateMetrics])
 
-  const goalRateMPPAggregation = useCallback((params: IAggFuncParams) => {
+  const actualPPHAggregation = useCallback((params: IAggFuncParams) => {
+    const { points, hours } = aggregateMetrics(params)
+    return hours > 0 ? points / hours : 0
+  }, [aggregateMetrics])
+
+  const goalRateSPPAggregation = useCallback((params: IAggFuncParams) => {
     const { points, goalHours } = aggregateMetrics(params)
-    return points > 0 ? (goalHours * 60) / points : 0
+    return points > 0 ? (goalHours * 3600) / points : 0
+  }, [aggregateMetrics])
+
+  const goalRatePPHAggregation = useCallback((params: IAggFuncParams) => {
+    const { points, goalHours } = aggregateMetrics(params)
+    return goalHours > 0 ? points / goalHours : 0
   }, [aggregateMetrics])
 
   const goalHoursAggregation = useCallback((params: IAggFuncParams) => {
@@ -392,7 +412,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
 
     {
       colId: 'actualRateMPP',
-      headerName: 'Actual Rate (MPP)',
+      headerName: 'Actual Rate (SPP)',
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['actualRateMPPAggregation'],
       aggFunc: 'actualRateMPPAggregation',
@@ -405,7 +425,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
           const points = getEffectivePoints(params.data)
 
           const value = points > 0
-            ? (hours * 60) / points
+            ? (hours * 3600) / points
             : 0;
           
           return {
@@ -424,7 +444,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
           const points = getEffectivePoints(params.data)
 
           const value = points > 0
-            ? (hours * 60) / points
+            ? (hours * 3600) / points
             : 0;
 
           return value;
@@ -454,13 +474,39 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     },
 
     {
-      colId: 'goalRateMPP',
-      headerName: 'Goal Rate',
+      colId: 'actualPPH',
+      headerName: 'Actual Rate (PPH)',
       filter: 'agNumberColumnFilter',
-      allowedAggFuncs: ['goalRateMPPAggregation'],
-      aggFunc: 'goalRateMPPAggregation',
+      allowedAggFuncs: ['actualPPHAggregation'],
+      aggFunc: 'actualPPHAggregation',
       enableValue: true,
-      valueGetter: params => getGoalRateMPP(params.data),
+      valueGetter: (params) => {
+        const points = getEffectivePoints(params.data)
+        const hours = Number(params.data?.hours) || 0
+        return hours > 0 ? points / hours : 0
+      },
+      valueFormatter: params => Number(params.value || 0).toFixed(2)
+    },
+
+    {
+      colId: 'goalRateSPP',
+      headerName: 'Goal Rate (SPP)',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['goalRateSPPAggregation'],
+      aggFunc: 'goalRateSPPAggregation',
+      enableValue: true,
+      valueGetter: params => getGoalRateSPP(params.data),
+      valueFormatter: params => Number(params.value || 0).toFixed(2)
+    },
+
+    {
+      colId: 'goalRatePPH',
+      headerName: 'Goal Rate (PPH)',
+      filter: 'agNumberColumnFilter',
+      allowedAggFuncs: ['goalRatePPHAggregation'],
+      aggFunc: 'goalRatePPHAggregation',
+      enableValue: true,
+      valueGetter: params => getGoalRatePPH(params.data),
       valueFormatter: params => Number(params.value || 0).toFixed(2)
     },
 
@@ -473,8 +519,8 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       enableValue: true,
       valueGetter: (params) => {
         const points = getEffectivePoints(params.data)
-        const goalRateMPP = getGoalRateMPP(params.data)
-        return points > 0 ? (goalRateMPP * points) / 60 : 0
+        const goalRateSPP = getGoalRateSPP(params.data)
+        return points > 0 ? (goalRateSPP * points) / 3600 : 0
       },
       valueFormatter: params => Number(params.value || 0).toFixed(2)
     },
@@ -488,8 +534,8 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       enableValue: true,
       valueGetter: (params) => {
         const points = getEffectivePoints(params.data)
-        const goalRateMPP = getGoalRateMPP(params.data)
-        const goalHours = points > 0 ? (goalRateMPP * points) / 60 : 0
+        const goalRateSPP = getGoalRateSPP(params.data)
+        const goalHours = points > 0 ? (goalRateSPP * points) / 3600 : 0
         const hours = Number(params.data?.hours) || 0
         return goalHours - hours
       },
@@ -505,15 +551,15 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       enableValue: true,
       valueGetter: (params) => {
         const points = getEffectivePoints(params.data)
-        const goalRateMPP = getGoalRateMPP(params.data)
-        const goalHours = points > 0 ? (goalRateMPP * points) / 60 : 0
+        const goalRateSPP = getGoalRateSPP(params.data)
+        const goalHours = points > 0 ? (goalRateSPP * points) / 3600 : 0
         const hours = Number(params.data?.hours) || 0
         return hours > 0 ? (goalHours / hours) * 100 : 0
       },
       valueFormatter: params => `${Number(params.value || 0).toFixed(0)}%`
     },
 
-  ], [getEffectivePoints, getGoalRateMPP])
+  ], [getEffectivePoints, getGoalRatePPH, getGoalRateSPP])
 
   // Adds additional defaults to each column definition
   const defaultColDef = useMemo(() => ({
@@ -531,11 +577,13 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
   const aggFuncs = useMemo(() => ({
     pointsAggregation,
     actualRateMPPAggregation,
-    goalRateMPPAggregation,
+    actualPPHAggregation,
+    goalRateSPPAggregation,
+    goalRatePPHAggregation,
     goalHoursAggregation,
     hoursDeltaAggregation,
     pctToGoalAggregation
-  }), [actualRateMPPAggregation, goalHoursAggregation, goalRateMPPAggregation, hoursDeltaAggregation, pctToGoalAggregation, pointsAggregation])
+  }), [actualPPHAggregation, actualRateMPPAggregation, goalHoursAggregation, goalRatePPHAggregation, goalRateSPPAggregation, hoursDeltaAggregation, pctToGoalAggregation, pointsAggregation])
 
   // Theme of the grid
   const theme = useMemo(() => themeQuartz.withParams({
