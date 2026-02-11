@@ -9,7 +9,7 @@ import { LocationRow, LocationInsightsGridProps } from '../utils/definitions'
 import { AgGridReact } from 'ag-grid-react'
 import { AgChartsEnterpriseModule } from "ag-charts-enterprise"
 import { LicenseManager, AllEnterpriseModule, IntegratedChartsModule } from 'ag-grid-enterprise'
-import { ColDef, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQuartz, IAggFuncParams, IHeaderParams } from 'ag-grid-community'
+import { ColDef, ModuleRegistry, StateUpdatedEvent, AllCommunityModule, themeQuartz, IAggFuncParams, IHeaderParams, ITooltipParams } from 'ag-grid-community'
 
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule, IntegratedChartsModule.with(AgChartsEnterpriseModule)])
 LicenseManager.setLicenseKey("Using_this_{AG_Charts_and_AG_Grid}_Enterprise_key_{AG-103378}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{Nellis_Auction}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{nellis}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{nellis}_need_to_be_licensed___{nellis}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Charts_and_AG_Grid}_Enterprise_versions_released_before_{11_September_2026}____[v3]_[0102]_MTc4OTA4MTIwMDAwMA==67f362d278f6fbbb12fe215d38e32531")
@@ -33,6 +33,38 @@ const HeaderWithCaption = (props: HeaderWithCaptionProps) => {
     <div className={styles.captionHeader} onClick={onSort} onKeyDown={onKeyDown} role="button" tabIndex={0}>
       <span className={styles.captionHeaderTitle}>{props.displayName}</span>
       {props.caption && <span className={styles.captionHeaderSubtitle}>{props.caption}</span>}
+    </div>
+  )
+}
+
+const RichTooltip = (props: ITooltipParams<LocationRow>) => {
+  const raw = String(props.value ?? '').trim()
+  if (!raw) return null
+
+  const lines = raw.split('\n').map(line => line.trim()).filter(Boolean)
+
+  return (
+    <div className={styles.richTooltip}>
+      {lines.map((line, index) => {
+        const separatorIndex = line.indexOf(':')
+        const hasLabel = separatorIndex > 0
+        const label = hasLabel ? line.slice(0, separatorIndex).trim() : ''
+        const content = hasLabel ? line.slice(separatorIndex + 1).trim() : line
+        const isStatusLine = label.toLowerCase() === 'status'
+        const lowerContent = content.toLowerCase()
+        const statusClassName = isStatusLine
+          ? (lowerContent.includes('meeting') ? styles.richTooltipStatusGood : styles.richTooltipStatusBad)
+          : ''
+
+        return (
+          <div className={styles.richTooltipLine} key={`${line}-${index}`}>
+            {hasLabel && <span className={styles.richTooltipLabel}>{label}:</span>}
+            <span className={`${styles.richTooltipValue} ${statusClassName}`.trim()}>
+              {content}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -301,12 +333,57 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     return hours > 0 ? (goalHours / hours) * 100 : 0
   }, [aggregateMetrics])
 
+  const formatNumber = useCallback((value: number, digits = 2) => {
+    const num = Number(value)
+    if (!Number.isFinite(num)) return '0'
+    return num.toFixed(digits)
+  }, [])
+
+  const getLeafGoalHours = useCallback((row?: LocationRow) => {
+    const points = getEffectivePoints(row)
+    const goalRateSPP = getGoalRateSPP(row)
+    return points > 0 ? (goalRateSPP * points) / 3600 : 0
+  }, [getEffectivePoints, getGoalRateSPP])
+
   // Holds the state of the column definitions.
   const colDefs = useMemo<ColDef<LocationRow>[]>(() => [
 
     {
+      field: "year",
+      headerName: "Year",
+      filter: "agSetColumnFilter",
+      enablePivot: true,
+      enableRowGroup: true,
+    },
+
+    {
+      field: "month",
+      headerName: "Month",
+      filter: "agSetColumnFilter",
+      enablePivot: true,
+      enableRowGroup: true,
+    },
+
+    {
+      field: "week",
+      headerName: "Week",
+      filter: "agSetColumnFilter",
+      enablePivot: true,
+      enableRowGroup: true,
+    },
+
+    {
+      field: "day",
+      headerName: "Day",
+      filter: "agSetColumnFilter",
+      enablePivot: true,
+      enableRowGroup: true,
+    },
+
+    {
       field: "date",
       headerName: "Date",
+      headerTooltip: "Work date for the metric row.",
       filter: "agSetColumnFilter",
       sort: "asc",
       enablePivot: true,
@@ -324,6 +401,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       field: "location",
       headerName: "Location",
+      headerTooltip: "Auction/site location name.",
       filter: "agSetColumnFilter",
       enablePivot: true,
       enableRowGroup: true,
@@ -372,9 +450,17 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       field: "laborType",
       headerName: "Labor Type",
+      headerTooltip: "Direct = point-generating work. Support = indirect/admin work. Gap = non-assignment time.",
       filter: "agSetColumnFilter",
       enablePivot: true,
       enableRowGroup: true,
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const laborType = String(params.data?.laborType ?? '')
+        if (laborType.toLowerCase() === 'direct') return 'Direct: point-generating operational work.'
+        if (laborType.toLowerCase() === 'support') return 'Support: indirect/admin work. Points are aligned to Direct points at aggregate level.'
+        if (laborType.toLowerCase() === 'gap') return 'Gap: non-assignment/gap time.'
+        return laborType || 'Labor type'
+      }
     },
 
     {
@@ -444,12 +530,21 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
     {
       field: "points",
       headerName: "Points",
+      headerTooltip: "Effective points used for rates. Support points align to Direct points by area+department buckets.",
       filter: "agNumberColumnFilter",
       allowedAggFuncs: ['pointsAggregation'],
       aggFunc: 'pointsAggregation',
       enableValue: true,
       valueGetter: params => getEffectivePoints(params.data),
-      valueFormatter: params => params.value && params.value.toFixed(0)
+      valueFormatter: params => params.value && params.value.toFixed(0),
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const effectivePoints = Number(params.value ?? 0)
+        const rawPoints = Number(params.data?.points ?? 0)
+        if (params.node?.group) {
+          return `Effective Points (group): ${formatNumber(effectivePoints, 0)}\nAggregation de-duplicates overlapping Direct/Support/Total buckets.`
+        }
+        return `Effective Points: ${formatNumber(effectivePoints, 0)}\nRaw Row Points: ${formatNumber(rawPoints, 0)}`
+      }
     },
 
     {
@@ -458,11 +553,28 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Seconds per point' },
       autoHeaderHeight: true,
+      headerTooltip: "Actual seconds per point. Lower is better.\nFormula: (Actual Hours * 3600) / Points",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['actualRateMPPAggregation'],
       aggFunc: 'actualRateMPPAggregation',
       enableValue: true,
       cellStyle: params => getGoalStatusStyle(isMeetingGoalSPP(params)),
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const rate = params.node?.group
+          ? Number((params.node.aggData?.actualRateMPP as { value?: number } | undefined)?.value ?? 0)
+          : Number((params.value as { value?: number } | undefined)?.value ?? 0)
+        const hours = params.node?.group
+          ? Number((params.node.aggData?.actualRateMPP as { hours?: number } | undefined)?.hours ?? 0)
+          : Number(params.data?.hours ?? 0)
+        const points = params.node?.group
+          ? Number((params.node.aggData?.actualRateMPP as { points?: number } | undefined)?.points ?? 0)
+          : getEffectivePoints(params.data)
+        const goal = params.node?.group
+          ? Number(params.node.aggData?.goalRateSPP ?? 0)
+          : getGoalRateSPP(params.data)
+        const status = goal > 0 ? (rate <= goal ? 'Meeting goal' : 'Below goal') : 'No goal set'
+        return `Actual Rate (SPP): ${formatNumber(rate)}\nFormula: (${formatNumber(hours)} hrs * 3600) / ${formatNumber(points)} pts\nGoal (SPP): ${formatNumber(goal)}\nStatus: ${status}`
+      },
 
       valueGetter: (params) => {
         if (!(params.node && params.node.group)) {
@@ -525,6 +637,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Target seconds per point' },
       autoHeaderHeight: true,
+      headerTooltip: "Target seconds per point for the row.\nDirect is fixed target; Support is derived from supportGoalPointsPerHour.",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['goalRateSPPAggregation'],
       aggFunc: 'goalRateSPPAggregation',
@@ -539,6 +652,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Points per hour' },
       autoHeaderHeight: true,
+      headerTooltip: "Actual points per hour. Higher is better.\nFormula: Points / Actual Hours",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['actualPPHAggregation'],
       aggFunc: 'actualPPHAggregation',
@@ -549,7 +663,15 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
         const hours = Number(params.data?.hours) || 0
         return hours > 0 ? points / hours : 0
       },
-      valueFormatter: params => Number(params.value || 0).toFixed(2)
+      valueFormatter: params => Number(params.value || 0).toFixed(2),
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const rate = Number(params.value ?? 0)
+        const hours = params.node?.group ? Number(params.node.aggData?.hours ?? 0) : Number(params.data?.hours ?? 0)
+        const points = params.node?.group ? Number(params.node.aggData?.points ?? 0) : getEffectivePoints(params.data)
+        const goal = params.node?.group ? Number(params.node.aggData?.goalRatePPH ?? 0) : getGoalRatePPH(params.data)
+        const status = goal > 0 ? (rate >= goal ? 'Meeting goal' : 'Below goal') : 'No goal set'
+        return `Actual Rate (PPH): ${formatNumber(rate)}\nFormula: ${formatNumber(points)} pts / ${formatNumber(hours)} hrs\nGoal (PPH): ${formatNumber(goal)}\nStatus: ${status}`
+      }
     },
 
     {
@@ -558,6 +680,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Target points per hour' },
       autoHeaderHeight: true,
+      headerTooltip: "Target points per hour for the row.\nDirect is fixed target; Support uses supportGoalPointsPerHour.",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['goalRatePPHAggregation'],
       aggFunc: 'goalRatePPHAggregation',
@@ -572,9 +695,16 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Total worked hours' },
       autoHeaderHeight: true,
+      headerTooltip: "Actual worked hours used in all goal comparisons.",
       filter: "agNumberColumnFilter",
       enableValue: true,
-      valueFormatter: params => params.value && params.value.toFixed(2)
+      valueFormatter: params => params.value && params.value.toFixed(2),
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const actualHours = Number(params.value ?? 0)
+        const goalHours = params.node?.group ? Number(params.node.aggData?.goalHours ?? 0) : getLeafGoalHours(params.data)
+        const delta = goalHours - actualHours
+        return `Actual Hours: ${formatNumber(actualHours)}\nGoal Hours: ${formatNumber(goalHours)}\nDelta (Goal - Actual): ${formatNumber(delta)}`
+      }
     },
 
     {
@@ -583,6 +713,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Expected hours at goal rate' },
       autoHeaderHeight: true,
+      headerTooltip: "Expected hours if work was performed exactly at goal rate.\nFormula: (Goal SPP * Points) / 3600",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['goalHoursAggregation'],
       aggFunc: 'goalHoursAggregation',
@@ -592,7 +723,13 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
         const goalRateSPP = getGoalRateSPP(params.data)
         return points > 0 ? (goalRateSPP * points) / 3600 : 0
       },
-      valueFormatter: params => Number(params.value || 0).toFixed(2)
+      valueFormatter: params => Number(params.value || 0).toFixed(2),
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const goalHours = Number(params.value ?? 0)
+        const points = params.node?.group ? Number(params.node.aggData?.points ?? 0) : getEffectivePoints(params.data)
+        const goalSPP = params.node?.group ? Number(params.node.aggData?.goalRateSPP ?? 0) : getGoalRateSPP(params.data)
+        return `Goal Hours: ${formatNumber(goalHours)}\nFormula: (${formatNumber(goalSPP)} SPP * ${formatNumber(points)} pts) / 3600`
+      }
     },
 
     {
@@ -601,6 +738,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Goal hours minus actual hours' },
       autoHeaderHeight: true,
+      headerTooltip: "Difference between expected goal-hours and actual worked hours.\nPositive is better.",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['hoursDeltaAggregation'],
       aggFunc: 'hoursDeltaAggregation',
@@ -613,7 +751,14 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
         const hours = Number(params.data?.hours) || 0
         return goalHours - hours
       },
-      valueFormatter: params => Number(params.value || 0).toFixed(2)
+      valueFormatter: params => Number(params.value || 0).toFixed(2),
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const delta = Number(params.value ?? 0)
+        const hours = params.node?.group ? Number(params.node.aggData?.hours ?? 0) : Number(params.data?.hours ?? 0)
+        const goalHours = params.node?.group ? Number(params.node.aggData?.goalHours ?? 0) : getLeafGoalHours(params.data)
+        const status = delta >= 0 ? 'Meeting goal' : 'Below goal'
+        return `Hours Delta: ${formatNumber(delta)}\nFormula: ${formatNumber(goalHours)} Goal Hrs - ${formatNumber(hours)} Actual Hrs\nStatus: ${status}`
+      }
     },
 
     {
@@ -622,6 +767,7 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
       headerComponent: HeaderWithCaption,
       headerComponentParams: { caption: 'Goal hours divided by actual hours' },
       autoHeaderHeight: true,
+      headerTooltip: "Percent to goal.\nFormula: (Goal Hours / Actual Hours) * 100",
       filter: 'agNumberColumnFilter',
       allowedAggFuncs: ['pctToGoalAggregation'],
       aggFunc: 'pctToGoalAggregation',
@@ -634,15 +780,23 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
         const hours = Number(params.data?.hours) || 0
         return hours > 0 ? (goalHours / hours) * 100 : 0
       },
-      valueFormatter: params => `${Number(params.value || 0).toFixed(0)}%`
+      valueFormatter: params => `${Number(params.value || 0).toFixed(0)}%`,
+      tooltipValueGetter: (params: ITooltipParams<LocationRow>) => {
+        const pct = Number(params.value ?? 0)
+        const hours = params.node?.group ? Number(params.node.aggData?.hours ?? 0) : Number(params.data?.hours ?? 0)
+        const goalHours = params.node?.group ? Number(params.node.aggData?.goalHours ?? 0) : getLeafGoalHours(params.data)
+        const status = pct >= 100 ? 'Meeting goal' : 'Below goal'
+        return `PCT to Goal: ${formatNumber(pct)}%\nFormula: (${formatNumber(goalHours)} / ${formatNumber(hours)}) * 100\nStatus: ${status}`
+      }
     },
 
-  ], [getEffectivePoints, getGoalRatePPH, getGoalRateSPP])
+  ], [formatNumber, getEffectivePoints, getGoalRatePPH, getGoalRateSPP, getLeafGoalHours])
 
   // Adds additional defaults to each column definition
   const defaultColDef = useMemo(() => ({
     flex: 1,
     minWidth: 175,
+    tooltipComponent: RichTooltip,
     filterParams: {
       buttons: ["reset"]
     },
@@ -722,6 +876,8 @@ const LocationInsightsGrid = ({ rowData, gridState }: LocationInsightsGridProps)
           enableCharts
           theme={theme}
           cellSelection
+          tooltipShowDelay={120}
+          tooltipMouseTrack
 
           onStateUpdated={onStateUpdated}
           onFirstDataRendered={onFirstDataRendered}

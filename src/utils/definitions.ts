@@ -73,6 +73,10 @@ export type ActionInsightsGridProps = {
 }
 
 export type LocationRow = {
+  year?: number
+  month?: string
+  week?: string
+  day?: string
   date?: string
   locationId: number
   location: string
